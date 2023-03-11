@@ -2204,6 +2204,26 @@ module.exports = [
         exposes: [e.cover_position().setAccess('position', ea.STATE_SET)],
     },
     {
+        fingerprint: [
+            // Curtain motors:
+            {modelID: 'TS0601', manufacturerName: '_TZE200_tvltdfcj'},
+        ],
+        model: 'TS0601_cover_3',
+        vendor: 'TuYa',
+        description: 'Curtain motor',
+        whiteLabel: [
+            {vendor: 'RAEX', model: 'TP30-2/26EC'},
+        ],
+        fromZigbee: [fz.TP30_cover, fz.ignore_basic_report],
+        toZigbee: [tz.TP30_cover],
+        exposes: [e.cover_position().setAccess('position', ea.STATE_SET),
+            // exposes.numeric('percent_state', ea.STATE).withValueMin(0).withValueMax(100).withValueStep(1).withUnit('%'),
+            exposes.enum('mode', ea.STATE_SET, Object.values(tuya.RAEXLookups.TP30Mode)),
+            exposes.enum('motor_direction', ea.STATE_SET, Object.values(tuya.RAEXLookups.TP30Direction)),
+            exposes.enum('set_limit_point', ea.STATE_SET, Object.values(tuya.RAEXLookups.TP30SetLimitPoint)),
+        ],
+    },
+    {
         zigbeeModel: ['kud7u2l'],
         fingerprint: [
             {modelID: 'TS0601', manufacturerName: '_TZE200_ckud7u2l'},

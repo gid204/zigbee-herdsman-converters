@@ -8070,6 +8070,82 @@ const converters = {
             }
         },
     },
+    TP30_cover: {
+        cluster: 'manuSpecificTuya',
+        type: ['commandDataReport', 'commandDataResponse'],
+        options: [exposes.options.invert_cover()],
+        convert: (model, msg, publish, options, meta) => {
+            const dpValue = tuya.firstDpValue(msg, meta, 'TP30_cover');
+            const dp = dpValue.dp;
+            const value = tuya.getDataValue(dpValue);
+            switch (dp) {
+            case tuya.dataPoints.coverPosition: // Started moving to position (triggered from Zigbee)
+            case tuya.dataPoints.coverArrived: { // Arrived at position
+                const running = dp === tuya.dataPoints.coverArrived ? false : true;
+                const invert = tuya.isCoverInverted(meta.device.manufacturerName) ? !options.invert_cover : options.invert_cover;
+                const position = invert ? 100 - (value & 0xFF) : (value & 0xFF);
+                if (position > 0 && position <= 100) {
+                    return {running, position, state: 'OPEN'};
+                } else if (position == 0) { // Report fully closed
+                    return {running, position, state: 'CLOSE'};
+                } else {
+                    return {running}; // Not calibrated yet, no position is available
+                }
+            }
+            case tuya.dataPoints.coverSpeed: // Cover is reporting its current speed setting
+                return {motor_speed: value};
+            case tuya.dataPoints.state: // Ignore the cover state, it's not reliable between different covers!
+            case tuya.dataPoints.coverChange: // Ignore manual cover change, it's not reliable between different covers!
+                break;
+            case tuya.dataPoints.config: // Returned by configuration set; ignore
+                break;
+            case tuya.dataPoints.TP30SetLimitPoint:
+                switch (value) {
+                case 0: // up
+                    return {set_limit_point: 'up'};
+                case 1: // down
+                    return {set_limit_point: 'down'};
+                case 2: // down_delete
+                    return {set_limit_point: 'down_delete'};
+                default:
+                    meta.logger.warn('zigbee-herdsman-converters:TP30: ' +
+                    `Mode ${value} is not recognized.`);
+                    break;
+                }
+                break;
+            case tuya.dataPoints.TP30MotorDirection:
+                switch (value) {
+                case 0:
+                    return {motor_direction: 'forward'};
+                case 1:
+                    return {motor_direction: 'back'};
+                default:
+                    meta.logger.warn('TP30: ' +
+                    `Mode ${value} is not recognized.`);
+                    break;
+                }
+                break;
+            case tuya.dataPoints.TP30Mode:
+                switch (value) {
+                case 0: // morning
+                    return {mode: 'morning'};
+                case 1: // night
+                    return {mode: 'night'};
+                default:
+                    meta.logger.warn('zigbee-herdsman-converters:TP30: ' +
+                        `Mode ${value} is not recognized.`);
+                    break;
+                }
+                break;
+            case tuya.dataPoints.TP30SituationSet: // DP 11: Ignore until need is defined
+            case tuya.dataPoints.TP30TripStatus: // DP 106: Ignore until need is defined
+                break;
+            default: // Unknown code
+                meta.logger.warn(`TP30_cover: Unhandled DP #${dp} for ${meta.device.manufacturerName}:
+                    ${JSON.stringify(dpValue)}`);
+            }
+        },
+    },
     tm081: {
         cluster: 'manuSpecificTuya',
         type: ['commandDataReport'],

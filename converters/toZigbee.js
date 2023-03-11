@@ -6977,6 +6977,52 @@ const converters = {
             }
         },
     },
+    TP30_cover: {
+        key: ['state', 'position', 'mode', 'motor_direction', 'set_limit_point',],
+        options: [exposes.options.invert_cover()],
+        convertSet: async (entity, key, value, meta) => {
+            if (key === 'position') {
+                if (value >= 0 && value <= 100) {
+                    const invert = tuya.isCoverInverted(meta.device.manufacturerName) ?
+                        !meta.options.invert_cover : meta.options.invert_cover;
+
+                    value = invert ? 100 - value : value;
+                    await tuya.sendDataPointValue(entity, tuya.dataPoints.coverPosition, value);
+                } else {
+                    throw new Error('TuYa_cover_control: Curtain motor position is out of range');
+                }
+            } else if (key === 'state') {
+                const stateEnums = tuya.getCoverStateEnums(meta.device.manufacturerName);
+                meta.logger.debug(`TP30: Using state enums for ${meta.device.manufacturerName}:
+                ${JSON.stringify(stateEnums)}`);
+                value = value.toLowerCase();
+                switch (value) {
+                case 'close':
+                    await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30Control, stateEnums.close);
+                    break;
+                case 'open':
+                    await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30Control, stateEnums.open);
+                    break;
+                case 'stop':
+                    await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30Control, stateEnums.stop);
+                    break;
+                default:
+                    throw new Error('TP30: Invalid command received');
+                }
+            }
+            switch (key) {
+            case 'mode':
+                await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30Mode, utils.getKey(tuya.RAEXLookups.TP30Mode, value));
+                break;
+            case 'motor_direction':
+                await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30MotorDirection, utils.getKey(tuya.RAEXLookups.TP30MotorDirection, value));
+                break;
+            case 'set_limit_point':
+                await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30SetLimitPoint, utils.getKey(tuya.RAEXLookups.TP30SetLimitPoint, value));
+                break;
+            }
+        },
+    },
     tuya_smart_human_presense_sensor: {
         key: ['radar_sensitivity', 'minimum_range', 'maximum_range', 'detection_delay', 'fading_time'],
         convertSet: async (entity, key, value, meta) => {
