@@ -7015,7 +7015,7 @@ const converters = {
                 await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30Mode, utils.getKey(tuya.RAEXLookups.TP30Mode, value));
                 break;
             case 'motor_direction':
-                await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30MotorDirection, utils.getKey(tuya.RAEXLookups.TP30MotorDirection, value));
+                await tuya.sendDataPointBool(entity, tuya.dataPoints.TP30MotorDirection, utils.getKey(tuya.RAEXLookups.TP30MotorDirection, value));
                 break;
             case 'set_limit_point':
                 await tuya.sendDataPointEnum(entity, tuya.dataPoints.TP30SetLimitPoint, utils.getKey(tuya.RAEXLookups.TP30SetLimitPoint, value));

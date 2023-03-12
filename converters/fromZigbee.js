@@ -8076,6 +8076,7 @@ const converters = {
         options: [exposes.options.invert_cover()],
         convert: (model, msg, publish, options, meta) => {
             const dpValue = tuya.firstDpValue(msg, meta, 'TP30_cover');
+            let result = null;
             const dp = dpValue.dp;
             const value = tuya.getDataValue(dpValue);
             switch (dp) {
@@ -8101,12 +8102,14 @@ const converters = {
                 break;
             case tuya.dataPoints.TP30SetLimitPoint:
                 switch (value) {
-                case 0: // up
-                    return {set_limit_point: 'up'};
-                case 1: // down
-                    return {set_limit_point: 'down'};
-                case 2: // down_delete
-                    return {set_limit_point: 'down_delete'};
+                case 0: // set up
+                    return {set_limit_point: 'set_limit_up'};
+                case 1: // set down
+                    return {set_limit_point: 'set_limit_down'};
+                case 2: // move up step - this overides the maximum up limit so you can set a new limit
+                    return {set_limit_point: 'move_up_step'};
+                case 3: // move down step - this overides the maximum down limit so you can set a new limit
+                    return {set_limit_point: 'move_down_step'};
                 default:
                     meta.logger.warn('zigbee-herdsman-converters:TP30: ' +
                     `Mode ${value} is not recognized.`);
@@ -8116,29 +8119,18 @@ const converters = {
             case tuya.dataPoints.TP30MotorDirection:
                 switch (value) {
                 case 0:
-                    return {motor_direction: 'forward'};
+                    return {motor_direction: false};
                 case 1:
-                    return {motor_direction: 'back'};
+                    return {motor_direction: true};
                 default:
                     meta.logger.warn('TP30: ' +
                     `Mode ${value} is not recognized.`);
                     break;
                 }
                 break;
-            case tuya.dataPoints.TP30Mode:
-                switch (value) {
-                case 0: // morning
-                    return {mode: 'morning'};
-                case 1: // night
-                    return {mode: 'night'};
-                default:
-                    meta.logger.warn('zigbee-herdsman-converters:TP30: ' +
-                        `Mode ${value} is not recognized.`);
-                    break;
-                }
-                break;
-            case tuya.dataPoints.TP30SituationSet: // DP 11: Ignore until need is defined
-            case tuya.dataPoints.TP30TripStatus: // DP 106: Ignore until need is defined
+            case tuya.dataPoints.TP30Mode: // DP 4: This datapoint is defined and can be 'set' however it always resets back to 'morning' immediately.
+            case tuya.dataPoints.TP30SituationSet: // DP 11: This datapoint is defined but unused by the device.
+            case tuya.dataPoints.TP30TripStatus: // DP 106: This datapoint is defined but unused by the device.
                 break;
             default: // Unknown code
                 meta.logger.warn(`TP30_cover: Unhandled DP #${dp} for ${meta.device.manufacturerName}:
