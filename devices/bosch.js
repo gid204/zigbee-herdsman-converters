@@ -49,7 +49,7 @@ const displayOrientation = {
 // Radiator Thermostat II
 const tzLocal = {
     bosch_thermostat: {
-        key: ['window_open', 'boost', 'system_mode'],
+        key: ['window_open', 'boost', 'system_mode', 'pi_heating_demand'],
         convertSet: async (entity, key, value, meta) => {
             if (key === 'window_open') {
                 value = value.toUpperCase();
@@ -66,7 +66,7 @@ const tzLocal = {
                 return {state: {boost: value}};
             }
             if (key === 'system_mode') {
-                // Map system_mode (Off/Auto/Heat) to Boschg operating mode
+                // Map system_mode (Off/Auto/Heat) to Bosch operating mode
                 value = value.toLowerCase();
 
                 let opMode = operatingModes.manual; // OperatingMode 1 = Manual (Default)
@@ -79,6 +79,12 @@ const tzLocal = {
                 await entity.write('hvacThermostat', {0x4007: {value: opMode, type: herdsman.Zcl.DataType.enum8}}, boschManufacturer);
                 return {state: {system_mode: value}};
             }
+            if (key === 'pi_heating_demand') {
+                await entity.write('hvacThermostat',
+                    {0x4020: {value: value, type: herdsman.Zcl.DataType.enum8}},
+                    boschManufacturer);
+                return {state: {pi_heating_demand: value}};
+            }
         },
         convertGet: async (entity, key, meta) => {
             switch (key) {
@@ -90,6 +96,9 @@ const tzLocal = {
                 break;
             case 'system_mode':
                 await entity.read('hvacThermostat', [0x4007], boschManufacturer);
+                break;
+            case 'pi_heating_demand':
+                await entity.read('hvacThermostat', [0x4020], boschManufacturer);
                 break;
 
             default: // Unknown key
@@ -216,6 +225,21 @@ const fzLocal = {
             };
             if (result.action === 'none') delete result.action;
             return result;
+        },
+    },
+    bosch_ignore_dst: {
+        cluster: 'genTime',
+        type: 'read',
+        convert: async (model, msg, publish, options, meta) => {
+            if (msg.data.includes('dstStart', 'dstEnd', 'dstShift')) {
+                const response = {
+                    'dstStart': {attribute: 0x0003, status: herdsman.Zcl.Status.SUCCESS, value: 0x00},
+                    'dstEnd': {attribute: 0x0004, status: herdsman.Zcl.Status.SUCCESS, value: 0x00},
+                    'dstShift': {attribute: 0x0005, status: herdsman.Zcl.Status.SUCCESS, value: 0x00},
+                };
+
+                await msg.endpoint.readResponse(msg.cluster, msg.meta.zclTransactionSequenceNumber, response);
+            }
         },
     },
     bosch_thermostat: {
@@ -412,7 +436,13 @@ const definition = [
         vendor: 'Bosch',
         description: 'Radiator thermostat II',
         ota: ota.zigbeeOTA,
-        fromZigbee: [fz.thermostat, fz.battery, fzLocal.bosch_thermostat, fzLocal.bosch_userInterface],
+        fromZigbee: [
+            fz.thermostat,
+            fz.battery,
+            fzLocal.bosch_ignore_dst,
+            fzLocal.bosch_thermostat,
+            fzLocal.bosch_userInterface,
+        ],
         toZigbee: [
             tz.thermostat_occupied_heating_setpoint,
             tz.thermostat_local_temperature_calibration,
@@ -426,7 +456,7 @@ const definition = [
                 .withSetpoint('occupied_heating_setpoint', 5, 30, 0.5)
                 .withLocalTemperatureCalibration(-5, 5, 0.1)
                 .withSystemMode(['off', 'heat', 'auto'])
-                .withPiHeatingDemand(ea.STATE),
+                .withPiHeatingDemand(ea.ALL),
             exposes.binary('boost', ea.ALL, 'ON', 'OFF')
                 .withDescription('Activate Boost heating'),
             exposes.binary('window_open', ea.ALL, 'ON', 'OFF')
@@ -469,6 +499,13 @@ const definition = [
             // report window_open
             await endpoint.configureReporting('hvacThermostat', [{
                 attribute: {ID: 0x4042, type: herdsman.Zcl.DataType.enum8},
+                minimumReportInterval: 0,
+                maximumReportInterval: constants.repInterval.HOUR,
+                reportableChange: 1,
+            }], boschManufacturer);
+            // report boost as it's disabled by thermostat after 5 minutes
+            await endpoint.configureReporting('hvacThermostat', [{
+                attribute: {ID: 0x4043, type: herdsman.Zcl.DataType.enum8},
                 minimumReportInterval: 0,
                 maximumReportInterval: constants.repInterval.HOUR,
                 reportableChange: 1,

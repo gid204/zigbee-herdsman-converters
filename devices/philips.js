@@ -2480,7 +2480,7 @@ module.exports = [
         extend: philips.extend.light_onoff_brightness_colortemp({colorTempRange: [153, 454]}),
     },
     {
-        zigbeeModel: ['5309331P6', '5309330P6', '929003046301_03', '929003046301_02'],
+        zigbeeModel: ['5309331P6', '5309330P6', '929003046301_03', '929003046301_02', '929003046301_01'],
         model: '5309331P6',
         vendor: 'Philips',
         description: 'Hue White ambiance Runner triple spotlight',
@@ -2813,7 +2813,7 @@ module.exports = [
         extend: philips.extend.light_onoff_brightness_colortemp_color({colorTempRange: [153, 500]}),
     },
     {
-        zigbeeModel: ['915005997501', '915005997401'],
+        zigbeeModel: ['915005997501', '915005997401', '929003542401'],
         model: '915005997501',
         vendor: 'Philips',
         description: 'Hue Bluetooth white & color ambiance ceiling lamp Infuse large',

@@ -745,7 +745,9 @@ module.exports = [
         fromZigbee: [fz.xiaomi_contact, fz.ias_contact_alarm_1, fz.aqara_opple],
         toZigbee: [],
         meta: {battery: {voltageToPercentage: '3V_2850_3000'}},
-        exposes: [e.contact(), e.battery(), e.battery_voltage()],
+        exposes: [e.contact(), e.battery(), e.battery_voltage(),
+            exposes.binary('battery_cover', ea.STATE, 'OPEN', 'CLOSE'),
+        ],
     },
     {
         zigbeeModel: ['lumi.dimmer.rcbac1'],
@@ -1927,10 +1929,8 @@ module.exports = [
         exposes: [
             e.switch(), e.power().withAccess(ea.STATE_GET), e.energy(), e.device_temperature().withAccess(ea.STATE),
             e.voltage(), e.current(), e.consumer_connected(), e.led_disabled_night(),
-            e.power_outage_memory(), exposes.binary('auto_off', ea.STATE_SET, true, false)
-                .withDescription('Turn the device automatically off when attached device consumes less than 2W for 20 minutes'),
-            exposes.numeric('overload_protection', exposes.access.ALL).withValueMin(100).withValueMax(2300).withUnit('W')
-                .withDescription('Maximum allowed load, turns off if exceeded')],
+            e.power_outage_memory(), e.auto_off(20),
+            e.overload_protection(100, 2300)],
         ota: ota.zigbeeOTA,
     },
     {
@@ -1944,10 +1944,8 @@ module.exports = [
         exposes: [
             e.switch(), e.power().withAccess(ea.STATE_GET), e.energy(), e.device_temperature().withAccess(ea.STATE),
             e.voltage(), e.current(), e.consumer_connected(), e.led_disabled_night(),
-            e.power_outage_memory(), exposes.binary('auto_off', ea.STATE_SET, true, false)
-                .withDescription('Turn the device automatically off when attached device consumes less than 2W for 20 minutes'),
-            exposes.numeric('overload_protection', exposes.access.ALL).withValueMin(100).withValueMax(2300).withUnit('W')
-                .withDescription('Maximum allowed load, turns off if exceeded')],
+            e.power_outage_memory(), e.auto_off(20),
+            e.overload_protection(100, 2300)],
         ota: ota.zigbeeOTA,
     },
     {
@@ -1957,7 +1955,8 @@ module.exports = [
         vendor: 'Xiaomi',
         fromZigbee: [fz.on_off, fz.xiaomi_basic, fz.electrical_measurement, fz.metering,
             fz.aqara_opple, fz.xiaomi_power, fz.device_temperature],
-        toZigbee: [tz.on_off, tz.xiaomi_switch_power_outage_memory],
+        toZigbee: [tz.on_off, tz.xiaomi_switch_power_outage_memory, tz.xiaomi_led_disabled_night,
+            tz.xiaomi_overload_protection, tz.xiaomi_auto_off, tz.xiaomi_socket_button_lock],
         configure: async (device, coordinatorEndpoint, logger) => {
             const endpoint = device.getEndpoint(1);
             await reporting.bind(endpoint, coordinatorEndpoint, ['genOnOff']);
@@ -2006,9 +2005,10 @@ module.exports = [
                 globalStore.putValue(device, 'interval', interval);
             }
         },
-        exposes: [e.switch(), e.power(), e.energy(), e.power_outage_memory(),
-            e.voltage(), e.current(),
-            e.device_temperature().withDescription('Device temperature (polled every 30 min)')],
+        exposes: [e.switch(), e.power(), e.energy(), e.power_outage_memory(), e.voltage(), e.current(),
+            e.device_temperature().withDescription('Device temperature (polled every 30 min)'),
+            e.consumer_connected(), e.led_disabled_night(), e.overload_protection(100, 2300),
+            e.auto_off(20), e.button_lock()],
         ota: ota.zigbeeOTA,
     },
     {
@@ -2021,9 +2021,7 @@ module.exports = [
             tz.xiaomi_switch_power_outage_memory, tz.xiaomi_auto_off],
         exposes: [e.switch(), e.power().withAccess(ea.STATE_GET), e.energy(), e.device_temperature(), e.voltage(),
             e.power_outage_memory(), e.led_disabled_night(),
-            exposes.binary('auto_off', ea.STATE_SET, true, false)
-                .withDescription('If the power is constantly lower than 2W within half an hour, ' +
-                    'the plug will be automatically turned off')],
+            e.auto_off(30)],
         onEvent: async (type, data, device) => {
             device.skipTimeResponse = true;
             // According to the Zigbee the genTime.time should be the seconds since 1 January 2020 UTC
@@ -2829,8 +2827,7 @@ module.exports = [
         exposes: [e.switch(), e.power().withAccess(ea.STATE), e.energy(), e.device_temperature().withAccess(ea.STATE),
             e.voltage(), e.current(), e.consumer_connected().withAccess(ea.STATE),
             e.power_outage_memory(), e.led_disabled_night(), e.button_lock(),
-            exposes.numeric('overload_protection', exposes.access.ALL).withValueMin(100).withValueMax(2500).withUnit('W')
-                .withDescription('Maximum allowed load, turns off if exceeded')],
+            e.overload_protection(100, 2500)],
         ota: ota.zigbeeOTA,
     },
     {
@@ -2900,8 +2897,7 @@ module.exports = [
             e.current(), e.power_outage_memory(), e.led_disabled_night(), e.button_lock(),
             exposes.enum('button_switch_mode', exposes.access.ALL, ['relay', 'relay_and_usb'])
                 .withDescription('Control both relay and usb or only the relay with the physical switch button'),
-            exposes.numeric('overload_protection', exposes.access.ALL).withValueMin(100).withValueMax(2500).withUnit('W')
-                .withDescription('Maximum allowed load, turns off if exceeded')],
+            e.overload_protection(100, 2500)],
         ota: ota.zigbeeOTA,
     },
     {
@@ -2927,8 +2923,7 @@ module.exports = [
             e.switch(), e.power().withAccess(ea.STATE), e.energy(),
             e.device_temperature().withAccess(ea.STATE), e.voltage(),
             e.current(), e.power_outage_memory(), e.led_disabled_night(), e.button_lock(),
-            exposes.numeric('overload_protection', exposes.access.ALL).withValueMin(100).withValueMax(2500).withUnit('W')
-                .withDescription('Maximum allowed load, turns off if exceeded')],
+            e.overload_protection(100, 2500)],
         ota: ota.zigbeeOTA,
     },
     {
